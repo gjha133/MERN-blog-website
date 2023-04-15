@@ -1,10 +1,16 @@
 const express = require('express')
 const cors = require('cors')
+const dotenv = require('dotenv')
+dotenv.config()
 const mongoose = require('mongoose')
+const colors = require('colors')
 const User = require('./models/User')
 const Post = require('./models/Post')
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
+const connectDB = require('./config/connectDB.js')
+connectDB()
+
 const cookieParser = require('cookie-parser')
 const multer = require('multer');
 const uploadMiddleware = multer({ dest: 'uploads/' });
@@ -13,14 +19,14 @@ const fs = require('fs')
 const app = express()
 
 const salt = bcrypt.genSaltSync(10)
-const secret = 'd9io1jx90wid091xj0w9j19q278c3jftegrcs'
+const secret = process.env.SECRET
 
-app.use(cors({credentials: true, origin: "http://localhost:3000"}))
+app.use(cors({ credentials: true, origin: "http://localhost:3000" }))
 app.use(express.json())
 app.use(cookieParser())
 app.use('/uploads', express.static(__dirname + '/uploads'));
 
-mongoose.connect('mongodb+srv://gjha133:EApGh8m1UeffxSLI@cluster0.e5xc8pz.mongodb.net/?retryWrites=true&w=majority')
+mongoose.connect(process.env.MONGODB_URI)
 
 app.post('/register', async (req, res) => {
   const { username, password } = req.body
@@ -30,21 +36,21 @@ app.post('/register', async (req, res) => {
       password: bcrypt.hashSync(password, salt),
     })
     res.json(userDoc)
-  } catch(e) {
+  } catch (e) {
     res.status(400).json(e)
   }
 })
 
 app.post('/login', async (req, res) => {
   const { username, password } = req.body
-  const userDoc = await User.findOne({username})
+  const userDoc = await User.findOne({ username })
   const passOk = bcrypt.compareSync(password, userDoc.password)
-  if(passOk) {
+  if (passOk) {
     // logged in
-    jwt.sign({username, id: userDoc._id}, secret, {}, (err, token) => {
-      if(err) throw err
+    jwt.sign({ username, id: userDoc._id }, secret, {}, (err, token) => {
+      if (err) throw err
       res.cookie('token', token).json({
-        id:userDoc._id,
+        id: userDoc._id,
         username,
       })
     })
@@ -55,8 +61,8 @@ app.post('/login', async (req, res) => {
 
 app.get('/profile', (req, res) => {
   const { token } = req.cookies
-  jwt.verify(token, secret, {}, (err,  info) => {
-    if(err) throw err
+  jwt.verify(token, secret, {}, (err, info) => {
+    if (err) throw err
     res.json(info)
   })
 })
@@ -66,19 +72,19 @@ app.post('/logout', (req, res) => {
 })
 
 app.post('/post', uploadMiddleware.single('file'), async (req, res) => {
-  const {originalname, path} = req.file
+  const { originalname, path } = req.file
   const parts = originalname.split('.')
   const ext = parts[parts.length - 1]
   const newPath = path + '.' + ext
   fs.renameSync(path, newPath)
 
   const { token } = req.cookies
-  jwt.verify(token, secret, {}, async (err,  info) => {
-    if(err) throw err
-    const {title, summary, content} = req.body
+  jwt.verify(token, secret, {}, async (err, info) => {
+    if (err) throw err
+    const { title, summary, content } = req.body
     const postDoc = await Post.create({
       title,
-      summary, 
+      summary,
       content,
       cover: newPath,
       author: info.id
@@ -88,20 +94,20 @@ app.post('/post', uploadMiddleware.single('file'), async (req, res) => {
 
 })
 
-app.put('/post', uploadMiddleware.single('file'), async (req,res) => {
+app.put('/post', uploadMiddleware.single('file'), async (req, res) => {
   let newPath = null;
   if (req.file) {
-    const {originalname,path} = req.file;
+    const { originalname, path } = req.file;
     const parts = originalname.split('.');
     const ext = parts[parts.length - 1];
-    newPath = path+'.'+ext;
+    newPath = path + '.' + ext;
     fs.renameSync(path, newPath);
   }
 
-  const {token} = req.cookies;
-  jwt.verify(token, secret, {}, async (err,info) => {
+  const { token } = req.cookies;
+  jwt.verify(token, secret, {}, async (err, info) => {
     if (err) throw err;
-    const {id,title,summary,content} = req.body;
+    const { id, title, summary, content } = req.body;
     const postDoc = await Post.findById(id);
     const isAuthor = JSON.stringify(postDoc.author) === JSON.stringify(info.id);
     if (!isAuthor) {
@@ -122,9 +128,9 @@ app.put('/post', uploadMiddleware.single('file'), async (req,res) => {
 
 app.get('/post', async (req, res) => {
   const posts = await Post.find()
-  .populate('author', ['username'])
-  .sort({createdAt: -1})
-  .limit(20)
+    .populate('author', ['username'])
+    .sort({ createdAt: -1 })
+    .limit(20)
   res.json(posts)
 })
 
@@ -135,7 +141,8 @@ app.get('/post/:id', async (req, res) => {
 })
 
 
+const PORT = process.env.PORT
 
-app.listen(4000, () => {
-  console.log('Server started on port 4000')
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`.bgBlue.white)
 })
