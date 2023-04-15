@@ -8,25 +8,31 @@ const User = require('./models/User')
 const Post = require('./models/Post')
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
-const connectDB = require('./config/connectDB.js')
-connectDB()
-
-const cookieParser = require('cookie-parser')
-const multer = require('multer');
-const uploadMiddleware = multer({ dest: 'uploads/' });
 const fs = require('fs')
+const cookieParser = require('cookie-parser')
+const connectDB = require('./config/connectDB.js')
+const multer = require('multer');
+
+connectDB()
+const uploadMiddleware = multer({ dest: 'uploads/' });
 
 const app = express()
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', 'http://localhost:3000');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  next();
+});
+app.use(cors({ credentials: true, origin: "https://blog-app-server-jmfu.onrender.com" }))
+app.use(cors({ credentials: true, origin: "http://localhost:3000" }))
 
-const salt = bcrypt.genSaltSync(10)
-const secret = process.env.SECRET
-
-app.use(cors())
 app.use(express.json())
 app.use(cookieParser())
 app.use('/uploads', express.static(__dirname + '/uploads'));
 
-mongoose.connect(process.env.MONGODB_URI)
+const salt = bcrypt.genSaltSync(10)
+const secret = process.env.SECRET
 
 app.post('/register', async (req, res) => {
   const { username, password } = req.body
