@@ -18,14 +18,14 @@ const uploadMiddleware = multer({ dest: 'uploads/' });
 
 const app = express()
 app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', 'http://localhost:3000');
+  res.setHeader('Access-Control-Allow-Origin', 'https://blog-app-sooty-chi.vercel.app');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   next();
 });
-app.use(cors({ credentials: true, origin: "https://blog-app-server-jmfu.onrender.com" }))
-app.use(cors({ credentials: true, origin: "http://localhost:3000" }))
+
+app.use(cors({ credentials: true, origin: "https://blog-app-sooty-chi.vercel.app" }))
 
 app.use(express.json())
 app.use(cookieParser())
